@@ -1,0 +1,6 @@
+{
+  "name": "DocuFinder SaaS - Busca e Leitor Inteligente de PDFs",
+  "description": "Sistema SaaS para localização precisa de palavras-chave em documentos PDF com visualizador integrado, OCR e extração de trechos.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
