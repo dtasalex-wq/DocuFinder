@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { UploadCloud, FileText, Search, History, BarChart3, User, RotateCcw, LogOut, ChevronDown, Shield, Users } from 'lucide-react';
 import { AppUser } from '../types';
+import { canUserResetData } from '../utils/auth';
 
 interface TopBarProps {
   activeTab: 'search' | 'documents' | 'history' | 'metrics' | 'users';
@@ -23,6 +24,7 @@ export const TopBar: React.FC<TopBarProps> = ({
 }) => {
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
+  const canReset = canUserResetData(user);
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
@@ -122,10 +124,10 @@ export const TopBar: React.FC<TopBarProps> = ({
 
         {/* Zone 3: 1-2 primary actions */}
         <div className="flex items-center gap-2 sm:gap-3">
-          {onResetAll && (
+          {onResetAll && canReset && (
             <button
               onClick={onResetAll}
-              title="Zerar todos os dados do aplicativo"
+              title="Zerar todos os dados do aplicativo (Apenas Administradores e Suporte)"
               className="flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-medium text-slate-500 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors cursor-pointer"
             >
               <RotateCcw className="w-3.5 h-3.5" />

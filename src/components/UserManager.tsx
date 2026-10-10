@@ -31,6 +31,7 @@ import {
   FileText,
   UploadCloud,
   Download,
+  RotateCcw,
 } from 'lucide-react';
 
 interface UserManagerProps {
@@ -66,6 +67,7 @@ export const UserManager: React.FC<UserManagerProps> = ({ currentUser }) => {
     canExportData: false,
     canManageUsers: false,
     canViewMetrics: false,
+    canResetAllData: false,
   });
 
   // Edit form state
@@ -82,6 +84,7 @@ export const UserManager: React.FC<UserManagerProps> = ({ currentUser }) => {
     canExportData: false,
     canManageUsers: false,
     canViewMetrics: false,
+    canResetAllData: false,
   });
 
   // Reset password state
@@ -112,6 +115,7 @@ export const UserManager: React.FC<UserManagerProps> = ({ currentUser }) => {
         canExportData: true,
         canManageUsers: true,
         canViewMetrics: true,
+        canResetAllData: true,
       });
     } else if (newRole === 'analista') {
       setCreatePermissions({
@@ -120,6 +124,7 @@ export const UserManager: React.FC<UserManagerProps> = ({ currentUser }) => {
         canExportData: true,
         canManageUsers: false,
         canViewMetrics: true,
+        canResetAllData: false,
       });
     } else {
       setCreatePermissions({
@@ -128,6 +133,7 @@ export const UserManager: React.FC<UserManagerProps> = ({ currentUser }) => {
         canExportData: false,
         canManageUsers: false,
         canViewMetrics: false,
+        canResetAllData: false,
       });
     }
   };
@@ -174,6 +180,7 @@ export const UserManager: React.FC<UserManagerProps> = ({ currentUser }) => {
         canExportData: u.role === 'admin' || u.role === 'analista',
         canManageUsers: u.role === 'admin',
         canViewMetrics: u.role === 'admin' || u.role === 'analista',
+        canResetAllData: u.role === 'admin',
       }
     );
     setIsEditOpen(true);
@@ -356,7 +363,7 @@ export const UserManager: React.FC<UserManagerProps> = ({ currentUser }) => {
             </div>
           </div>
           <p className="text-2xl font-bold text-purple-600">{adminUsersCount}</p>
-          <p className="text-[11px] text-slate-400 mt-1">Acesso irrestrito a configurações</p>
+          <p className="text-[11px] text-purple-700 font-medium mt-1">Autorizados a Zerar Dados: {adminUsersCount} admins</p>
         </div>
 
         {/* Card 4: Analysts & Members */}
@@ -369,8 +376,36 @@ export const UserManager: React.FC<UserManagerProps> = ({ currentUser }) => {
           </div>
           <p className="text-2xl font-bold text-blue-600">{analystUsersCount + memberUsersCount}</p>
           <p className="text-[11px] text-slate-400 mt-1">
-            {analystUsersCount} analistas • {memberUsersCount} membros
+            {analystUsersCount} analistas • {memberUsersCount} membros (Sem acesso a zerar)
           </p>
+        </div>
+      </div>
+
+      {/* Metric & Security Policy for System Reset */}
+      <div className="bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200/80 rounded-xl p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-2xs">
+        <div className="flex items-start sm:items-center gap-3">
+          <div className="w-8 h-8 rounded-lg bg-amber-100 text-amber-700 flex items-center justify-center shrink-0">
+            <RotateCcw className="w-4 h-4" />
+          </div>
+          <div>
+            <h4 className="text-xs font-bold text-slate-900 flex items-center gap-2">
+              <span>Métrica de Segurança: Autorização para Zerar Dados</span>
+              <span className="px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 text-[10px] font-semibold">
+                Política Restritiva
+              </span>
+            </h4>
+            <p className="text-[11px] text-slate-600 mt-0.5">
+              Somente usuários com perfil <strong>Administrador</strong> ou <strong>Suporte</strong> possuem permissão para zerar o banco de dados. 
+              A confirmação exige obrigatoriamente a senha master (<code className="bg-white/80 px-1 py-0.5 rounded text-amber-900 font-mono text-[10px] border border-amber-200">autorizo_zerar</code> ou <code className="bg-white/80 px-1 py-0.5 rounded text-amber-900 font-mono text-[10px] border border-amber-200">suporteabc</code>).
+            </p>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-2 shrink-0">
+          <div className="px-3 py-1.5 bg-white border border-amber-200 rounded-lg text-center shadow-2xs">
+            <span className="text-[10px] text-slate-500 block">Autorizados Atuais</span>
+            <span className="text-xs font-bold text-amber-700">{adminUsersCount} Gestores</span>
+          </div>
         </div>
       </div>
 
@@ -512,6 +547,21 @@ export const UserManager: React.FC<UserManagerProps> = ({ currentUser }) => {
                           {u.permissions?.canManageUsers && (
                             <span className="px-1.5 py-0.5 bg-purple-50 text-purple-700 rounded text-[10px] flex items-center gap-1 font-medium">
                               <Shield className="w-2.5 h-2.5" /> Gestão
+                            </span>
+                          )}
+                          {isAdmin || u.permissions?.canResetAllData ? (
+                            <span
+                              className="px-1.5 py-0.5 bg-red-50 text-red-700 rounded text-[10px] flex items-center gap-1 font-semibold"
+                              title="Permissão para zerar o banco de dados mediante senha master autorizada"
+                            >
+                              <RotateCcw className="w-2.5 h-2.5" /> Zerar Dados
+                            </span>
+                          ) : (
+                            <span
+                              className="px-1.5 py-0.5 bg-slate-100 text-slate-400 rounded text-[10px] flex items-center gap-1 font-normal"
+                              title="Sem autorização para zerar dados (restrito a Administradores e Suporte)"
+                            >
+                              <Lock className="w-2.5 h-2.5" /> Zerar: Bloqueado
                             </span>
                           )}
                         </div>
@@ -746,6 +796,24 @@ export const UserManager: React.FC<UserManagerProps> = ({ currentUser }) => {
                     />
                     <span>Visualizar dashboard de métricas e analytics</span>
                   </label>
+
+                  <label className="flex items-start gap-2 select-none text-xs text-slate-700 bg-red-50/50 p-2 rounded border border-red-100">
+                    <input
+                      type="checkbox"
+                      disabled={createRole !== 'admin'}
+                      checked={createRole === 'admin'}
+                      readOnly
+                      className="rounded text-red-600 focus:ring-red-500 cursor-not-allowed mt-0.5 opacity-80"
+                    />
+                    <div className="flex flex-col">
+                      <span className={`font-semibold ${createRole === 'admin' ? 'text-red-700' : 'text-slate-400'}`}>
+                        Zerar Dados do Sistema (Ação Crítica)
+                      </span>
+                      <span className="text-[10px] text-slate-500 leading-tight">
+                        Exclusivo para Administradores e Suporte (requer senha de autorização master).
+                      </span>
+                    </div>
+                  </label>
                 </div>
               </div>
 
@@ -950,6 +1018,24 @@ export const UserManager: React.FC<UserManagerProps> = ({ currentUser }) => {
                       className="rounded text-indigo-600 focus:ring-indigo-500 cursor-pointer"
                     />
                     <span>Visualização de Métricas do Sistema</span>
+                  </label>
+
+                  <label className="flex items-start gap-2 select-none text-xs text-slate-700 bg-red-50/50 p-2 rounded border border-red-100">
+                    <input
+                      type="checkbox"
+                      disabled={editRole !== 'admin'}
+                      checked={editRole === 'admin'}
+                      readOnly
+                      className="rounded text-red-600 focus:ring-red-500 cursor-not-allowed mt-0.5 opacity-80"
+                    />
+                    <div className="flex flex-col">
+                      <span className={`font-semibold ${editRole === 'admin' ? 'text-red-700' : 'text-slate-400'}`}>
+                        Zerar Dados do Sistema (Ação Crítica)
+                      </span>
+                      <span className="text-[10px] text-slate-500 leading-tight">
+                        Exclusivo para Administradores e Suporte (requer senha de autorização master).
+                      </span>
+                    </div>
                   </label>
                 </div>
               </div>

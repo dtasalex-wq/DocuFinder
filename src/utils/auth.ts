@@ -19,6 +19,14 @@ const DEFAULT_ACCOUNTS: UserAccount[] = [
     role: 'admin',
     isSuperuser: true,
     status: 'ativo',
+    permissions: {
+      canUploadDocs: true,
+      canDeleteDocs: true,
+      canExportData: true,
+      canManageUsers: true,
+      canViewMetrics: true,
+      canResetAllData: true,
+    },
     createdAt: '2026-10-09T00:00:00.000Z',
     passwordHash: 'suporteabc',
   },
@@ -37,6 +45,7 @@ const DEFAULT_ACCOUNTS: UserAccount[] = [
       canExportData: true,
       canManageUsers: true,
       canViewMetrics: true,
+      canResetAllData: true,
     },
     createdAt: '2026-10-09T10:00:00.000Z',
     passwordHash: 'adm321',
@@ -56,6 +65,7 @@ const DEFAULT_ACCOUNTS: UserAccount[] = [
       canExportData: true,
       canManageUsers: true,
       canViewMetrics: true,
+      canResetAllData: true,
     },
     createdAt: '2026-01-15T10:00:00.000Z',
     passwordHash: 'dantas123',
@@ -75,6 +85,7 @@ const DEFAULT_ACCOUNTS: UserAccount[] = [
       canExportData: true,
       canManageUsers: false,
       canViewMetrics: true,
+      canResetAllData: false,
     },
     createdAt: '2026-03-10T14:20:00.000Z',
     passwordHash: 'senha123',
@@ -126,6 +137,7 @@ export function getRegisteredUsers(): UserAccount[] {
           canExportData: true,
           canManageUsers: true,
           canViewMetrics: true,
+          canResetAllData: true,
         },
         createdAt: '2026-10-09T10:00:00.000Z',
         passwordHash: 'adm321',
@@ -135,6 +147,18 @@ export function getRegisteredUsers(): UserAccount[] {
       users[adminIndex].username = 'administrador';
       users[adminIndex].role = 'admin';
       users[adminIndex].status = 'ativo';
+      if (!users[adminIndex].permissions) {
+        users[adminIndex].permissions = {
+          canUploadDocs: true,
+          canDeleteDocs: true,
+          canExportData: true,
+          canManageUsers: true,
+          canViewMetrics: true,
+          canResetAllData: true,
+        };
+      } else {
+        users[adminIndex].permissions.canResetAllData = true;
+      }
     }
 
     // Migration: ensure superuser 'suporte' exists with password 'suporteabc'
@@ -152,6 +176,14 @@ export function getRegisteredUsers(): UserAccount[] {
         role: 'admin',
         isSuperuser: true,
         status: 'ativo',
+        permissions: {
+          canUploadDocs: true,
+          canDeleteDocs: true,
+          canExportData: true,
+          canManageUsers: true,
+          canViewMetrics: true,
+          canResetAllData: true,
+        },
         createdAt: '2026-10-09T00:00:00.000Z',
         passwordHash: 'suporteabc',
       });
@@ -159,7 +191,27 @@ export function getRegisteredUsers(): UserAccount[] {
       users[superIndex].passwordHash = 'suporteabc';
       users[superIndex].username = 'suporte';
       users[superIndex].isSuperuser = true;
+      if (!users[superIndex].permissions) {
+        users[superIndex].permissions = {
+          canUploadDocs: true,
+          canDeleteDocs: true,
+          canExportData: true,
+          canManageUsers: true,
+          canViewMetrics: true,
+          canResetAllData: true,
+        };
+      } else {
+        users[superIndex].permissions.canResetAllData = true;
+      }
     }
+
+    // Normalize canResetAllData for all users: only Admins and Support can have true
+    users.forEach((u) => {
+      const isPrivileged = u.role === 'admin' || u.isSuperuser || u.username === 'suporte' || u.username === 'administrador';
+      if (u.permissions) {
+        u.permissions.canResetAllData = isPrivileged;
+      }
+    });
 
     localStorage.setItem(USERS_KEY, JSON.stringify(users));
     return users;
@@ -325,10 +377,16 @@ export function createManagedUser(params: {
 
   const role = params.role || 'membro';
   const defaultPermissions: import('../types').UserPermissions = role === 'admin'
-    ? { canUploadDocs: true, canDeleteDocs: true, canExportData: true, canManageUsers: true, canViewMetrics: true }
+    ? { canUploadDocs: true, canDeleteDocs: true, canExportData: true, canManageUsers: true, canViewMetrics: true, canResetAllData: true }
     : role === 'analista'
-    ? { canUploadDocs: true, canDeleteDocs: false, canExportData: true, canManageUsers: false, canViewMetrics: true }
-    : { canUploadDocs: true, canDeleteDocs: false, canExportData: false, canManageUsers: false, canViewMetrics: false };
+    ? { canUploadDocs: true, canDeleteDocs: false, canExportData: true, canManageUsers: false, canViewMetrics: true, canResetAllData: false }
+    : { canUploadDocs: true, canDeleteDocs: false, canExportData: false, canManageUsers: false, canViewMetrics: false, canResetAllData: false };
+
+  const finalPermissions: import('../types').UserPermissions = {
+    ...(params.permissions || defaultPermissions),
+    // By security metric: only administrators can have canResetAllData
+    canResetAllData: role === 'admin',
+  };
 
   const newAccount: UserAccount = {
     id: `usr_${Date.now()}`,
@@ -339,7 +397,7 @@ export function createManagedUser(params: {
     plan: params.plan || 'Empresarial',
     role,
     status: params.status || 'ativo',
-    permissions: params.permissions || defaultPermissions,
+    permissions: finalPermissions,
     createdAt: new Date().toISOString(),
     passwordHash: cleanPass,
   };
@@ -357,6 +415,18 @@ export function updateManagedUser(updatedUser: AppUser): { success: boolean; err
   const index = users.findIndex((u) => u.id === updatedUser.id);
   if (index === -1) return { success: false, error: 'Usuário não encontrado.' };
 
+  const nextRole = updatedUser.role || users[index].role || 'membro';
+  const nextPermissions: import('../types').UserPermissions = {
+    ...(updatedUser.permissions || users[index].permissions || {
+      canUploadDocs: true,
+      canDeleteDocs: false,
+      canExportData: false,
+      canManageUsers: false,
+      canViewMetrics: false,
+    }),
+    canResetAllData: nextRole === 'admin',
+  };
+
   users[index] = {
     ...users[index],
     name: updatedUser.name,
@@ -364,9 +434,9 @@ export function updateManagedUser(updatedUser: AppUser): { success: boolean; err
     username: updatedUser.username || users[index].username,
     company: updatedUser.company,
     plan: updatedUser.plan,
-    role: updatedUser.role || users[index].role,
+    role: nextRole,
     status: updatedUser.status || users[index].status || 'ativo',
-    permissions: updatedUser.permissions || users[index].permissions,
+    permissions: nextPermissions,
   };
   saveUsers(users);
 
@@ -551,3 +621,73 @@ export function requestPasswordReset(loginOrEmail: string): { success: boolean; 
     message: `Se esta conta estiver cadastrada, as instruções para redefinição de senha foram enviadas para ${found.email}.`,
   };
 }
+
+/**
+ * Valid authorization keys for triggering a system reset
+ */
+export const AUTHORIZED_RESET_PASSWORDS = ['autorizo_zerar', 'suporteabc'] as const;
+
+/**
+ * Checks whether a given user has authorization to clear/reset system data.
+ * Strictly limited to:
+ * 1. Superuser / Suporte account
+ * 2. Administrator role ('admin' / 'administrador')
+ */
+export function canUserResetData(user: AppUser | null | undefined): boolean {
+  if (!user) return false;
+  if (user.isSuperuser || user.username === 'suporte') return true;
+  if (user.role === 'admin' || user.username === 'administrador') return true;
+  if (user.permissions?.canResetAllData === true) return true;
+  return false;
+}
+
+/**
+ * Validates the authorization password entered for resetting data:
+ * Must match "autorizo_zerar" or "suporteabc".
+ */
+export function verifyResetAuthorizationPassword(password: string): boolean {
+  if (!password) return false;
+  const clean = password.trim();
+  return clean === 'autorizo_zerar' || clean === 'suporteabc';
+}
+
+const SYSTEM_RESETS_LOG_KEY = 'docufinder_system_resets_log';
+
+/**
+ * Retrieves the audit trail of all executed system resets
+ */
+export function getSystemResetLogs(): import('../types').SystemResetLog[] {
+  if (typeof window === 'undefined') return [];
+  try {
+    const raw = localStorage.getItem(SYSTEM_RESETS_LOG_KEY);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+}
+
+/**
+ * Records an authorized system reset in the audit log
+ */
+export function recordSystemResetLog(entry: Omit<import('../types').SystemResetLog, 'id' | 'timestamp'>): import('../types').SystemResetLog {
+  const logItem: import('../types').SystemResetLog = {
+    ...entry,
+    id: `reset_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
+    timestamp: new Date().toISOString(),
+  };
+
+  if (typeof window !== 'undefined') {
+    try {
+      const logs = getSystemResetLogs();
+      logs.unshift(logItem);
+      localStorage.setItem(SYSTEM_RESETS_LOG_KEY, JSON.stringify(logs.slice(0, 50)));
+    } catch (e) {
+      console.error('Failed to save reset audit log:', e);
+    }
+  }
+
+  return logItem;
+}
+

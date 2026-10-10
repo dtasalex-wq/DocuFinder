@@ -58,6 +58,18 @@ export interface UserPermissions {
   canExportData: boolean;
   canManageUsers: boolean;
   canViewMetrics: boolean;
+  canResetAllData?: boolean;
+}
+
+export interface SystemResetLog {
+  id: string;
+  timestamp: string;
+  userId: string;
+  userName: string;
+  userEmail: string;
+  userRole: string;
+  documentsCleared: number;
+  historyCleared: number;
 }
 
 export interface AppUser {

@@ -19,7 +19,7 @@ import {
 } from './utils/storage';
 import { DEMO_DOCUMENTS } from './utils/demoData';
 import { parseSearchTerms, searchInDocuments } from './utils/textSearch';
-import { getCurrentSession, logoutUser } from './utils/auth';
+import { getCurrentSession, logoutUser, canUserResetData, recordSystemResetLog } from './utils/auth';
 import { LoginScreen } from './components/LoginScreen';
 import { TopBar } from './components/TopBar';
 import { StatsCards } from './components/StatsCards';
@@ -32,6 +32,7 @@ import { UploadModal } from './components/UploadModal';
 import { PdfViewerModal } from './components/PdfViewerModal';
 import { UserAccountModal } from './components/UserAccountModal';
 import { UserManager } from './components/UserManager';
+import { ResetDataModal } from './components/ResetDataModal';
 
 export default function App() {
   const [activeTab, setActiveTab] = useState<'search' | 'documents' | 'history' | 'metrics' | 'users'>('search');
@@ -57,6 +58,7 @@ export default function App() {
   // Modals & Viewer
   const [isUploadOpen, setIsUploadOpen] = useState<boolean>(false);
   const [isAccountOpen, setIsAccountOpen] = useState<boolean>(false);
+  const [isResetModalOpen, setIsResetModalOpen] = useState<boolean>(false);
   const [viewerDoc, setViewerDoc] = useState<StoredDocument | null>(null);
   const [viewerPage, setViewerPage] = useState<number>(1);
   const [viewerTerm, setViewerTerm] = useState<string>('');
@@ -85,8 +87,23 @@ export default function App() {
     loadData();
   }, []);
 
-  // Total reset action (only triggered when user explicitly clicks "Zerar Dados")
-  const handleResetAllData = async () => {
+  // Open reset authorization modal (protected: only Admins and Support)
+  const handleOpenResetModal = () => {
+    if (!canUserResetData(user)) {
+      alert('Acesso restrito: Apenas Administradores e a equipe de Suporte têm autorização para zerar os dados do sistema.');
+      return;
+    }
+    setIsResetModalOpen(true);
+  };
+
+  // Total reset action (only executed after verified authorization password)
+  const handleExecuteResetAllData = async () => {
+    if (!canUserResetData(user)) {
+      throw new Error('Acesso negado: Perfil não autorizado.');
+    }
+    const docsCount = documents.length;
+    const historyCount = history.length;
+
     await clearAllDocuments();
     await clearSearchHistory();
     setDocuments([]);
@@ -96,6 +113,18 @@ export default function App() {
     setSearchedTerms([]);
     setHasSearched(false);
     setViewerDoc(null);
+
+    // Audit log
+    if (user) {
+      recordSystemResetLog({
+        userId: user.id,
+        userName: user.name,
+        userEmail: user.email,
+        userRole: user.role || (user.isSuperuser ? 'admin' : 'membro'),
+        documentsCleared: docsCount,
+        historyCleared: historyCount,
+      });
+    }
   };
 
   // Execute search
@@ -230,7 +259,7 @@ export default function App() {
         onOpenUpload={() => setIsUploadOpen(true)}
         user={user}
         onOpenAccount={() => setIsAccountOpen(true)}
-        onResetAll={handleResetAllData}
+        onResetAll={handleOpenResetModal}
         onLogout={handleLogout}
       />
 
@@ -305,7 +334,7 @@ export default function App() {
             onDeleteDocument={handleDeleteDocument}
             onFilterByDocument={handleFilterByDoc}
             onLoadDemoDocs={handleLoadDemoDocs}
-            onClearAll={handleClearAllDocs}
+            onClearAll={handleOpenResetModal}
           />
         )}
 
@@ -360,6 +389,18 @@ export default function App() {
         onUpdateUser={setUser}
         onLogout={handleLogout}
       />
+
+      {/* Reset System Data Authorization Modal */}
+      {user && (
+        <ResetDataModal
+          isOpen={isResetModalOpen}
+          onClose={() => setIsResetModalOpen(false)}
+          onConfirmReset={handleExecuteResetAllData}
+          currentUser={user}
+          totalDocs={documents.length}
+          totalHistory={history.length}
+        />
+      )}
     </div>
   );
 }
