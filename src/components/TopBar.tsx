@@ -1,10 +1,10 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { UploadCloud, FileText, Search, History, BarChart3, User, RotateCcw, LogOut, ChevronDown, Shield } from 'lucide-react';
+import { UploadCloud, FileText, Search, History, BarChart3, User, RotateCcw, LogOut, ChevronDown, Shield, Users } from 'lucide-react';
 import { AppUser } from '../types';
 
 interface TopBarProps {
-  activeTab: 'search' | 'documents' | 'history' | 'metrics';
-  setActiveTab: (tab: 'search' | 'documents' | 'history' | 'metrics') => void;
+  activeTab: 'search' | 'documents' | 'history' | 'metrics' | 'users';
+  setActiveTab: (tab: 'search' | 'documents' | 'history' | 'metrics' | 'users') => void;
   onOpenUpload: () => void;
   user: AppUser;
   onOpenAccount: () => void;
@@ -36,10 +36,10 @@ export const TopBar: React.FC<TopBarProps> = ({
 
   return (
     <header className="sticky top-0 z-30 bg-white border-b border-slate-200">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 min-h-[96px] sm:min-h-[104px] py-2 flex items-center justify-between">
         
-        {/* Zone 1: Brand logo banner from attached file */}
-        <div className="flex items-center">
+        {/* Zone 1: Brand logo banner (enlarged to double original size) */}
+        <div className="flex items-center py-1">
           <a
             href="#"
             onClick={(e) => {
@@ -52,13 +52,13 @@ export const TopBar: React.FC<TopBarProps> = ({
             <img
               src="/logo-banner.png"
               alt="DocuFinder - Encontre o que você precisa em arquivos .pdf."
-              className="h-10 sm:h-11 w-auto object-contain"
+              className="h-20 sm:h-22 w-auto object-contain transition-transform hover:scale-101"
             />
           </a>
         </div>
 
-        {/* Zone 2: 4 clean text navigation links */}
-        <nav className="hidden md:flex items-center gap-8 text-sm font-medium text-slate-600">
+        {/* Zone 2: Clean text navigation links */}
+        <nav className="hidden md:flex items-center gap-7 text-sm font-medium text-slate-600">
           <button
             onClick={() => setActiveTab('search')}
             className={`flex items-center gap-1.5 py-1 transition-colors ${
@@ -105,6 +105,18 @@ export const TopBar: React.FC<TopBarProps> = ({
           >
             <BarChart3 className="w-4 h-4" />
             <span>Dashboard</span>
+          </button>
+
+          <button
+            onClick={() => setActiveTab('users')}
+            className={`flex items-center gap-1.5 py-1 transition-colors ${
+              activeTab === 'users'
+                ? 'text-indigo-600 font-semibold border-b-2 border-indigo-600'
+                : 'hover:text-slate-900'
+            }`}
+          >
+            <Users className="w-4 h-4" />
+            <span>Usuários</span>
           </button>
         </nav>
 

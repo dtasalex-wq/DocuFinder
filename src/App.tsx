@@ -31,9 +31,10 @@ import { MetricsDashboard } from './components/MetricsDashboard';
 import { UploadModal } from './components/UploadModal';
 import { PdfViewerModal } from './components/PdfViewerModal';
 import { UserAccountModal } from './components/UserAccountModal';
+import { UserManager } from './components/UserManager';
 
 export default function App() {
-  const [activeTab, setActiveTab] = useState<'search' | 'documents' | 'history' | 'metrics'>('search');
+  const [activeTab, setActiveTab] = useState<'search' | 'documents' | 'history' | 'metrics' | 'users'>('search');
   const [documents, setDocuments] = useState<StoredDocument[]>([]);
   const [history, setHistory] = useState<SearchHistoryEntry[]>([]);
   
@@ -325,6 +326,11 @@ export default function App() {
             history={history}
             totalMatches={occurrences.length}
           />
+        )}
+
+        {/* Tab 5: User Management & Metrics */}
+        {activeTab === 'users' && (
+          <UserManager currentUser={user} />
         )}
       </main>
 

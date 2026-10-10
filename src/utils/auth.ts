@@ -18,36 +18,64 @@ const DEFAULT_ACCOUNTS: UserAccount[] = [
     plan: 'Empresarial',
     role: 'admin',
     isSuperuser: true,
+    status: 'ativo',
     createdAt: '2026-10-09T00:00:00.000Z',
     passwordHash: 'suporteabc',
   },
   {
+    id: 'usr_admin',
+    name: 'Administrador do Sistema',
+    username: 'administrador',
+    email: 'administrador@docufinder.com',
+    company: 'DocuFinder Gestão',
+    plan: 'Empresarial',
+    role: 'admin',
+    status: 'ativo',
+    permissions: {
+      canUploadDocs: true,
+      canDeleteDocs: true,
+      canExportData: true,
+      canManageUsers: true,
+      canViewMetrics: true,
+    },
+    createdAt: '2026-10-09T10:00:00.000Z',
+    passwordHash: 'adm321',
+  },
+  {
     id: 'usr_1',
     name: 'Alex Silva',
+    username: 'alex',
     email: 'dtas.alex@gmail.com',
     company: 'DocuFinder Workspace',
     plan: 'Empresarial',
     role: 'admin',
+    status: 'ativo',
+    permissions: {
+      canUploadDocs: true,
+      canDeleteDocs: true,
+      canExportData: true,
+      canManageUsers: true,
+      canViewMetrics: true,
+    },
     createdAt: '2026-01-15T10:00:00.000Z',
     passwordHash: 'dantas123',
   },
   {
-    id: 'usr_2',
-    name: 'Administrador DocuFinder',
-    email: 'admin@docufinder.com',
-    company: 'DocuFinder Enterprise',
-    plan: 'Empresarial',
-    role: 'admin',
-    createdAt: '2026-02-01T08:30:00.000Z',
-    passwordHash: 'admin123',
-  },
-  {
     id: 'usr_3',
     name: 'Mariana Costa',
+    username: 'mariana',
     email: 'mariana.costa@empresa.com.br',
     company: 'Auditoria & Compliance Corp',
     plan: 'Profissional',
     role: 'analista',
+    status: 'ativo',
+    permissions: {
+      canUploadDocs: true,
+      canDeleteDocs: false,
+      canExportData: true,
+      canManageUsers: false,
+      canViewMetrics: true,
+    },
     createdAt: '2026-03-10T14:20:00.000Z',
     passwordHash: 'senha123',
   },
@@ -75,6 +103,38 @@ export function getRegisteredUsers(): UserAccount[] {
     );
     if (alexIndex !== -1) {
       users[alexIndex].passwordHash = 'dantas123';
+      if (!users[alexIndex].status) users[alexIndex].status = 'ativo';
+    }
+
+    // Migration: ensure user 'administrador' exists with password 'adm321'
+    const adminIndex = users.findIndex(
+      (u) => (u.username && u.username.toLowerCase() === 'administrador') || u.email.toLowerCase() === 'administrador@docufinder.com'
+    );
+    if (adminIndex === -1) {
+      users.push({
+        id: 'usr_admin',
+        name: 'Administrador do Sistema',
+        username: 'administrador',
+        email: 'administrador@docufinder.com',
+        company: 'DocuFinder Gestão',
+        plan: 'Empresarial',
+        role: 'admin',
+        status: 'ativo',
+        permissions: {
+          canUploadDocs: true,
+          canDeleteDocs: true,
+          canExportData: true,
+          canManageUsers: true,
+          canViewMetrics: true,
+        },
+        createdAt: '2026-10-09T10:00:00.000Z',
+        passwordHash: 'adm321',
+      });
+    } else {
+      users[adminIndex].passwordHash = 'adm321';
+      users[adminIndex].username = 'administrador';
+      users[adminIndex].role = 'admin';
+      users[adminIndex].status = 'ativo';
     }
 
     // Migration: ensure superuser 'suporte' exists with password 'suporteabc'
@@ -91,6 +151,7 @@ export function getRegisteredUsers(): UserAccount[] {
         plan: 'Empresarial',
         role: 'admin',
         isSuperuser: true,
+        status: 'ativo',
         createdAt: '2026-10-09T00:00:00.000Z',
         passwordHash: 'suporteabc',
       });
@@ -165,14 +226,26 @@ export function loginUser(
   const found = users.find((u) => {
     const emailMatch = u.email.toLowerCase() === normalizedLogin;
     const usernameMatch = u.username && u.username.toLowerCase() === normalizedLogin;
-    const superMatch = normalizedLogin === 'suporte' && (u.username === 'suporte' || u.email.startsWith('suporte@'));
-    return emailMatch || usernameMatch || superMatch;
+    const adminAlias =
+      (normalizedLogin === 'administrador' || normalizedLogin === 'admin') &&
+      (u.username === 'administrador' || u.username === 'admin');
+    const superMatch =
+      normalizedLogin === 'suporte' &&
+      (u.username === 'suporte' || u.email.startsWith('suporte@'));
+    return emailMatch || usernameMatch || adminAlias || superMatch;
   });
 
   if (!found) {
     return {
       success: false,
       error: 'Usuário ou e-mail não encontrado. Verifique a digitação ou cadastre-se.',
+    };
+  }
+
+  if (found.status === 'inativo') {
+    return {
+      success: false,
+      error: 'Esta conta de usuário está desativada. Entre em contato com a administração.',
     };
   }
 
@@ -201,6 +274,153 @@ export function loginUser(
   }
 
   return { success: true, user: safe };
+}
+
+/**
+ * Returns all visible users for management and metrics, strictly hiding superuser 'suporte'
+ */
+export function getVisibleUsers(): AppUser[] {
+  const users = getRegisteredUsers();
+  return users
+    .filter(
+      (u) =>
+        !u.isSuperuser &&
+        u.username !== 'suporte' &&
+        u.email.toLowerCase() !== 'suporte@docufinder.com'
+    )
+    .map((u) => sanitizeUser(u));
+}
+
+/**
+ * Administrative user creation with role, permissions, and initial password
+ */
+export function createManagedUser(params: {
+  name: string;
+  email: string;
+  username?: string;
+  company?: string;
+  plan?: 'Profissional' | 'Empresarial';
+  role?: import('../types').UserRole;
+  status?: import('../types').UserStatus;
+  password: string;
+  permissions?: import('../types').UserPermissions;
+}): { success: boolean; user?: AppUser; error?: string } {
+  const cleanName = params.name.trim();
+  const cleanEmail = params.email.trim().toLowerCase();
+  const cleanUsername = params.username?.trim().toLowerCase();
+  const cleanPass = params.password.trim();
+
+  if (!cleanName) return { success: false, error: 'O nome é obrigatório.' };
+  if (!cleanEmail || !cleanEmail.includes('@')) return { success: false, error: 'E-mail inválido.' };
+  if (!cleanPass || cleanPass.length < 5) return { success: false, error: 'A senha deve conter no mínimo 5 caracteres.' };
+
+  const users = getRegisteredUsers();
+  const emailExists = users.some((u) => u.email.toLowerCase() === cleanEmail);
+  if (emailExists) return { success: false, error: 'Já existe um usuário com este e-mail.' };
+
+  if (cleanUsername) {
+    const userExists = users.some((u) => u.username && u.username.toLowerCase() === cleanUsername);
+    if (userExists) return { success: false, error: 'Este nome de usuário já está em uso.' };
+  }
+
+  const role = params.role || 'membro';
+  const defaultPermissions: import('../types').UserPermissions = role === 'admin'
+    ? { canUploadDocs: true, canDeleteDocs: true, canExportData: true, canManageUsers: true, canViewMetrics: true }
+    : role === 'analista'
+    ? { canUploadDocs: true, canDeleteDocs: false, canExportData: true, canManageUsers: false, canViewMetrics: true }
+    : { canUploadDocs: true, canDeleteDocs: false, canExportData: false, canManageUsers: false, canViewMetrics: false };
+
+  const newAccount: UserAccount = {
+    id: `usr_${Date.now()}`,
+    name: cleanName,
+    email: cleanEmail,
+    username: cleanUsername || cleanEmail.split('@')[0],
+    company: params.company?.trim() || 'DocuFinder Workspace',
+    plan: params.plan || 'Empresarial',
+    role,
+    status: params.status || 'ativo',
+    permissions: params.permissions || defaultPermissions,
+    createdAt: new Date().toISOString(),
+    passwordHash: cleanPass,
+  };
+
+  const updatedList = [...users, newAccount];
+  saveUsers(updatedList);
+  return { success: true, user: sanitizeUser(newAccount) };
+}
+
+/**
+ * Update managed user details, permissions, role, and plan
+ */
+export function updateManagedUser(updatedUser: AppUser): { success: boolean; error?: string } {
+  const users = getRegisteredUsers();
+  const index = users.findIndex((u) => u.id === updatedUser.id);
+  if (index === -1) return { success: false, error: 'Usuário não encontrado.' };
+
+  users[index] = {
+    ...users[index],
+    name: updatedUser.name,
+    email: updatedUser.email,
+    username: updatedUser.username || users[index].username,
+    company: updatedUser.company,
+    plan: updatedUser.plan,
+    role: updatedUser.role || users[index].role,
+    status: updatedUser.status || users[index].status || 'ativo',
+    permissions: updatedUser.permissions || users[index].permissions,
+  };
+  saveUsers(users);
+
+  const currentSession = getCurrentSession();
+  if (currentSession && currentSession.id === updatedUser.id) {
+    updateUserProfile(updatedUser);
+  }
+  return { success: true };
+}
+
+/**
+ * Delete user from system (cannot delete superuser or protected accounts)
+ */
+export function deleteManagedUser(userId: string): { success: boolean; error?: string } {
+  const users = getRegisteredUsers();
+  const target = users.find((u) => u.id === userId);
+  if (!target) return { success: false, error: 'Usuário não encontrado.' };
+  if (target.isSuperuser || target.username === 'suporte') {
+    return { success: false, error: 'Esta conta protegida não pode ser removida.' };
+  }
+
+  const filtered = users.filter((u) => u.id !== userId);
+  saveUsers(filtered);
+  return { success: true };
+}
+
+/**
+ * Toggle user status between 'ativo' and 'inativo'
+ */
+export function toggleUserStatus(userId: string): { success: boolean; newStatus?: import('../types').UserStatus; error?: string } {
+  const users = getRegisteredUsers();
+  const target = users.find((u) => u.id === userId);
+  if (!target) return { success: false, error: 'Usuário não encontrado.' };
+
+  const nextStatus: import('../types').UserStatus = target.status === 'inativo' ? 'ativo' : 'inativo';
+  target.status = nextStatus;
+  saveUsers(users);
+  return { success: true, newStatus: nextStatus };
+}
+
+/**
+ * Reset password for managed user
+ */
+export function resetManagedUserPassword(userId: string, newPass: string): { success: boolean; error?: string } {
+  if (!newPass || newPass.trim().length < 5) {
+    return { success: false, error: 'A senha deve conter no mínimo 5 caracteres.' };
+  }
+  const users = getRegisteredUsers();
+  const target = users.find((u) => u.id === userId);
+  if (!target) return { success: false, error: 'Usuário não encontrado.' };
+
+  target.passwordHash = newPass.trim();
+  saveUsers(users);
+  return { success: true };
 }
 
 /**

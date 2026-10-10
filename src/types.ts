@@ -49,6 +49,17 @@ export interface SearchHistoryEntry {
   filters: Partial<SearchFilters>;
 }
 
+export type UserRole = 'admin' | 'analista' | 'membro';
+export type UserStatus = 'ativo' | 'inativo';
+
+export interface UserPermissions {
+  canUploadDocs: boolean;
+  canDeleteDocs: boolean;
+  canExportData: boolean;
+  canManageUsers: boolean;
+  canViewMetrics: boolean;
+}
+
 export interface AppUser {
   id: string;
   name: string;
@@ -56,7 +67,9 @@ export interface AppUser {
   username?: string;
   company: string;
   plan: 'Profissional' | 'Empresarial';
-  role?: 'admin' | 'analista' | 'membro';
+  role?: UserRole;
+  status?: UserStatus;
+  permissions?: UserPermissions;
   avatarUrl?: string;
   createdAt?: string;
   isSuperuser?: boolean;
