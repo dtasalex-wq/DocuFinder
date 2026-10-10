@@ -38,30 +38,22 @@ export const TopBar: React.FC<TopBarProps> = ({
     <header className="sticky top-0 z-30 bg-white border-b border-slate-200">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
         
-        {/* Zone 1: Brand logo and header text */}
-        <div className="flex items-center gap-3">
+        {/* Zone 1: Brand logo banner from attached file */}
+        <div className="flex items-center">
           <a
             href="#"
             onClick={(e) => {
               e.preventDefault();
               setActiveTab('search');
             }}
-            className="flex items-center gap-2.5 hover:opacity-90 transition-opacity"
+            className="flex items-center hover:opacity-90 transition-opacity"
             title="DocuFinder - Encontre o que você precisa em arquivos .pdf."
           >
             <img
-              src="/logo.png"
-              alt="DocuFinder Logo"
-              className="h-10 w-10 object-contain rounded-lg shrink-0"
+              src="/logo-banner.png"
+              alt="DocuFinder - Encontre o que você precisa em arquivos .pdf."
+              className="h-10 sm:h-11 w-auto object-contain"
             />
-            <div className="flex flex-col justify-center">
-              <span className="text-base font-extrabold tracking-tight text-slate-900 leading-none">
-                DocuFinder
-              </span>
-              <span className="text-[10.5px] font-semibold text-indigo-600 leading-tight mt-0.5 hidden sm:inline">
-                Encontre o que você precisa em arquivos .pdf.
-              </span>
-            </div>
           </a>
         </div>
 

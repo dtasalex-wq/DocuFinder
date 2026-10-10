@@ -119,20 +119,19 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess }) => {
       <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[800px] h-[400px] bg-indigo-600/15 blur-3xl pointer-events-none rounded-full" />
       <div className="absolute -bottom-20 right-10 w-[500px] h-[300px] bg-blue-600/10 blur-3xl pointer-events-none rounded-full" />
 
-      {/* Main Container */}
-      <div className="sm:mx-auto sm:w-full sm:max-w-md relative z-10 text-center">
-        <div className="inline-block bg-white p-3.5 sm:p-4 rounded-2xl shadow-2xl border border-slate-100/90 mb-3">
-          <img
-            src="/logo-stacked.png"
-            alt="DocuFinder - Encontre o que você precisa em arquivos .pdf."
-            className="w-48 sm:w-56 h-auto object-contain mx-auto"
-          />
-        </div>
-      </div>
-
-      <div className="mt-4 sm:mx-auto sm:w-full sm:max-w-lg relative z-10 px-4">
+      {/* Main Login Card Box */}
+      <div className="sm:mx-auto sm:w-full sm:max-w-lg relative z-10 px-4">
         <div className="bg-white rounded-2xl shadow-2xl border border-slate-200 overflow-hidden">
           
+          {/* Logo Banner inside the same box */}
+          <div className="pt-8 pb-5 px-6 flex justify-center items-center bg-white border-b border-slate-100">
+            <img
+              src="/logo-banner.png"
+              alt="DocuFinder - Encontre o que você precisa em arquivos .pdf."
+              className="w-full max-w-[320px] sm:max-w-[360px] h-auto object-contain mx-auto"
+            />
+          </div>
+
           {/* Header Tabs */}
           <div className="flex border-b border-slate-100 bg-slate-50/70 p-1.5">
             <button
