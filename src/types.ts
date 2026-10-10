@@ -53,9 +53,11 @@ export interface AppUser {
   id: string;
   name: string;
   email: string;
+  username?: string;
   company: string;
   plan: 'Profissional' | 'Empresarial';
   role?: 'admin' | 'analista' | 'membro';
   avatarUrl?: string;
   createdAt?: string;
+  isSuperuser?: boolean;
 }

@@ -120,19 +120,17 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess }) => {
       <div className="absolute -bottom-20 right-10 w-[500px] h-[300px] bg-blue-600/10 blur-3xl pointer-events-none rounded-full" />
 
       {/* Main Container */}
-      <div className="sm:mx-auto sm:w-full sm:max-w-md relative z-10">
-        <div className="flex items-center justify-center gap-3 mb-4">
-          <div className="w-10 h-10 rounded-xl bg-indigo-600 text-white flex items-center justify-center font-bold text-lg shadow-lg shadow-indigo-600/30">
-            DF
-          </div>
-          <h1 className="text-2xl font-extrabold text-white tracking-tight">DocuFinder SaaS</h1>
+      <div className="sm:mx-auto sm:w-full sm:max-w-md relative z-10 text-center">
+        <div className="inline-block bg-white p-3.5 sm:p-4 rounded-2xl shadow-2xl border border-slate-100/90 mb-3">
+          <img
+            src="/logo-stacked.png"
+            alt="DocuFinder - Encontre o que você precisa em arquivos .pdf."
+            className="w-48 sm:w-56 h-auto object-contain mx-auto"
+          />
         </div>
-        <p className="text-center text-sm text-slate-400">
-          Pesquisa inteligente, extração precisa e visualização de documentos PDF
-        </p>
       </div>
 
-      <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-lg relative z-10 px-4">
+      <div className="mt-4 sm:mx-auto sm:w-full sm:max-w-lg relative z-10 px-4">
         <div className="bg-white rounded-2xl shadow-2xl border border-slate-200 overflow-hidden">
           
           {/* Header Tabs */}
@@ -192,18 +190,18 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess }) => {
               <form onSubmit={handleLogin} className="space-y-4">
                 <div>
                   <label className="block text-xs font-semibold text-slate-700 mb-1.5">
-                    E-mail Corporativo
+                    Usuário ou E-mail
                   </label>
                   <div className="relative rounded-lg shadow-2xs">
                     <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
                       <Mail className="w-4 h-4" />
                     </div>
                     <input
-                      type="email"
+                      type="text"
                       required
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
-                      placeholder="seu.email@empresa.com"
+                      placeholder="dtas.alex@gmail.com ou suporte"
                       className="block w-full pl-9 pr-3 py-2.5 border border-slate-300 rounded-lg text-xs text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-600 focus:border-transparent transition-all"
                     />
                   </div>

@@ -10,6 +10,18 @@ const REMEMBER_KEY = 'docufinder_remember_me';
 
 const DEFAULT_ACCOUNTS: UserAccount[] = [
   {
+    id: 'usr_super',
+    name: 'Suporte DocuFinder',
+    username: 'suporte',
+    email: 'suporte@docufinder.com',
+    company: 'DocuFinder Master Admin',
+    plan: 'Empresarial',
+    role: 'admin',
+    isSuperuser: true,
+    createdAt: '2026-10-09T00:00:00.000Z',
+    passwordHash: 'suporteabc',
+  },
+  {
     id: 'usr_1',
     name: 'Alex Silva',
     email: 'dtas.alex@gmail.com',
@@ -17,7 +29,7 @@ const DEFAULT_ACCOUNTS: UserAccount[] = [
     plan: 'Empresarial',
     role: 'admin',
     createdAt: '2026-01-15T10:00:00.000Z',
-    passwordHash: '123456',
+    passwordHash: 'dantas123',
   },
   {
     id: 'usr_2',
@@ -42,23 +54,54 @@ const DEFAULT_ACCOUNTS: UserAccount[] = [
 ];
 
 /**
- * Initializes and retrieves all registered users from localStorage
+ * Initializes and retrieves all registered users from localStorage with automatic migrations
  */
 export function getRegisteredUsers(): UserAccount[] {
   if (typeof window === 'undefined') return DEFAULT_ACCOUNTS;
 
   try {
     const raw = localStorage.getItem(USERS_KEY);
-    if (!raw) {
-      localStorage.setItem(USERS_KEY, JSON.stringify(DEFAULT_ACCOUNTS));
-      return DEFAULT_ACCOUNTS;
+    let users: UserAccount[] = DEFAULT_ACCOUNTS;
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed) && parsed.length > 0) {
+        users = parsed;
+      }
     }
-    const parsed = JSON.parse(raw);
-    if (Array.isArray(parsed) && parsed.length > 0) {
-      return parsed;
+
+    // Migration: ensure dtas.alex@gmail.com has updated password 'dantas123'
+    const alexIndex = users.findIndex(
+      (u) => u.email.toLowerCase() === 'dtas.alex@gmail.com'
+    );
+    if (alexIndex !== -1) {
+      users[alexIndex].passwordHash = 'dantas123';
     }
-    localStorage.setItem(USERS_KEY, JSON.stringify(DEFAULT_ACCOUNTS));
-    return DEFAULT_ACCOUNTS;
+
+    // Migration: ensure superuser 'suporte' exists with password 'suporteabc'
+    const superIndex = users.findIndex(
+      (u) => (u.username && u.username.toLowerCase() === 'suporte') || u.email.toLowerCase() === 'suporte@docufinder.com'
+    );
+    if (superIndex === -1) {
+      users.unshift({
+        id: 'usr_super',
+        name: 'Suporte DocuFinder',
+        username: 'suporte',
+        email: 'suporte@docufinder.com',
+        company: 'DocuFinder Master Admin',
+        plan: 'Empresarial',
+        role: 'admin',
+        isSuperuser: true,
+        createdAt: '2026-10-09T00:00:00.000Z',
+        passwordHash: 'suporteabc',
+      });
+    } else {
+      users[superIndex].passwordHash = 'suporteabc';
+      users[superIndex].username = 'suporte';
+      users[superIndex].isSuperuser = true;
+    }
+
+    localStorage.setItem(USERS_KEY, JSON.stringify(users));
+    return users;
   } catch (err) {
     console.error('Failed to parse registered users:', err);
     return DEFAULT_ACCOUNTS;
@@ -104,29 +147,32 @@ export function getCurrentSession(): AppUser | null {
 }
 
 /**
- * Login routine with email and password verification
+ * Login routine with email or username and password verification
  */
 export function loginUser(
-  email: string,
+  loginOrEmail: string,
   password: string,
   rememberMe: boolean = true
 ): { success: boolean; user?: AppUser; error?: string } {
-  const normalizedEmail = email.trim().toLowerCase();
+  const normalizedLogin = loginOrEmail.trim().toLowerCase();
   const normalizedPassword = password.trim();
 
-  if (!normalizedEmail || !normalizedPassword) {
-    return { success: false, error: 'Por favor, preencha o e-mail e a senha.' };
+  if (!normalizedLogin || !normalizedPassword) {
+    return { success: false, error: 'Por favor, preencha o usuário/e-mail e a senha.' };
   }
 
   const users = getRegisteredUsers();
-  const found = users.find(
-    (u) => u.email.toLowerCase() === normalizedEmail
-  );
+  const found = users.find((u) => {
+    const emailMatch = u.email.toLowerCase() === normalizedLogin;
+    const usernameMatch = u.username && u.username.toLowerCase() === normalizedLogin;
+    const superMatch = normalizedLogin === 'suporte' && (u.username === 'suporte' || u.email.startsWith('suporte@'));
+    return emailMatch || usernameMatch || superMatch;
+  });
 
   if (!found) {
     return {
       success: false,
-      error: 'E-mail não cadastrado. Verifique a digitação ou cadastre-se.',
+      error: 'Usuário ou e-mail não encontrado. Verifique a digitação ou cadastre-se.',
     };
   }
 
@@ -263,20 +309,25 @@ export function logoutUser(): void {
 /**
  * Simulated password reset routine
  */
-export function requestPasswordReset(email: string): { success: boolean; message: string } {
-  const cleanEmail = email.trim().toLowerCase();
+export function requestPasswordReset(loginOrEmail: string): { success: boolean; message: string } {
+  const clean = loginOrEmail.trim().toLowerCase();
   const users = getRegisteredUsers();
-  const found = users.find((u) => u.email.toLowerCase() === cleanEmail);
+  const found = users.find(
+    (u) =>
+      u.email.toLowerCase() === clean ||
+      (u.username && u.username.toLowerCase() === clean) ||
+      (clean === 'suporte' && u.email === 'suporte@docufinder.com')
+  );
 
   if (!found) {
     return {
       success: false,
-      message: 'Nenhuma conta encontrada com o e-mail informado.',
+      message: 'Nenhuma conta encontrada com o usuário ou e-mail informado.',
     };
   }
 
   return {
     success: true,
-    message: `Se este e-mail estiver cadastrado, as instruções para redefinição de senha foram enviadas para ${cleanEmail}.`,
+    message: `Se esta conta estiver cadastrada, as instruções para redefinição de senha foram enviadas para ${found.email}.`,
   };
 }
